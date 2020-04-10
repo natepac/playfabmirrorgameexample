@@ -1728,10 +1728,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 182fa8fa81926724c943eec381248c4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  buildType: 1
-  buildId: fba2c2a0-400f-4c35-9e77-c1adacddcce4
-  ipAddress: 52.150.34.137
-  port: 30000
+  buildType: 3
+  buildId: 
+  ipAddress: 
+  port: 0
   playFabDebugging: 0
 --- !u!4 &1995558417
 Transform:
