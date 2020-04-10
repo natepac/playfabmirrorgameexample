@@ -1,0 +1,15 @@
+{
+    "name": "ApathyTransport",
+    "references": [
+        "Apathy",
+        "Mirror"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}
