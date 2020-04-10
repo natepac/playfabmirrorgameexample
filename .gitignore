@@ -5,5 +5,4 @@ Packages/
 Temp/
 .vs/
 *.csproj
-*.meta
 *.sln
