@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d0199c11aa6f514784c5c69cd8378d8, type: 3}
   m_Name: PlayFabEditorPrefsSO
   m_EditorClassIdentifier: 
-  DevAccountEmail: nate@trycatchgames.com
-  DevAccountToken: 7oajwjk5p37teexpb77zuewcrpxqfc1z93ue9q5hpmwydh4yq8aiq6bi4zeabup1oopr1t789efyriz17rp6u19a5iunjnrtptjyz3a99pm4ezewtrejgxcnbcz1iqwi4ebufibbffdwbnuknrh4wftbgpwzsjb14iwra6xs8rfrbouyaciq11ynqs8yb7148psn9x63
+  DevAccountEmail: 
+  DevAccountToken: 
   SelectedStudio: 
-  SdkPath: Assets/PlayFabSdk
+  SdkPath: 
   EdExPath: 
   LocalCloudScriptPath: 
   PanelIsShown: 0
-  curMainMenuIdx: 1
+  curMainMenuIdx: 0
   curSubMenuIdx: 0
