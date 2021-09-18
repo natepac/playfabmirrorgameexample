@@ -99,6 +99,16 @@ Once built, you should be able to open up the exe you put out and connect with i
 
 The “Players” are just spawned white cubes in a 5x3 grid. You may have a player spawn on top of another. This is just a quick and dirty player spawn example to show that others are connecting. If you happen to hit Login and don’t see anything make sure the window is sized enough and you can also move the camera back by holding the “S” key, as the camera has a Simple Camera Controller script on it. 
 
+*****************************************************
+
+WARNING: YOU WILL PAY FOR STANDBY SERVERS!!! Now that your CC number is registered at PlayFab you will be responsible for any standby server costs. Please refer to the server costs see here:
+
+https://docs.microsoft.com/en-us/gaming/playfab/features/multiplayer/servers/billing-for-thunderhead
+
+When you are not testing, set your Standby Servers to 0. 
+
+*****************************************************
+
 ### A few notes and tips:
 
 Make sure your server has a timeout script on it with Application.Quit() my ServerStartUp script has an example of this. 
