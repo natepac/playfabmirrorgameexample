@@ -16,7 +16,7 @@ namespace PlayFab.EventsModels
         /// </summary>
         public string Id;
         /// <summary>
-        /// Entity type. See https://api.playfab.com/docs/tutorials/entities/entitytypes
+        /// Entity type. See https://docs.microsoft.com/gaming/playfab/features/data/entities/available-built-in-entity-types
         /// </summary>
         public string Type;
     }
@@ -25,11 +25,17 @@ namespace PlayFab.EventsModels
     public class EventContents : PlayFabBaseModel
     {
         /// <summary>
+        /// The optional custom tags associated with the event (e.g. build number, external trace identifiers, etc.). Before an
+        /// event is written, this collection and the base request custom tags will be merged, but not overriden. This enables the
+        /// caller to specify static tags and per event tags.
+        /// </summary>
+        public Dictionary<string,string> CustomTags;
+        /// <summary>
         /// Entity associated with the event. If null, the event will apply to the calling entity.
         /// </summary>
         public EntityKey Entity;
         /// <summary>
-        /// The namespace in which the event is defined. It must begin with 'com.playfab.events.'
+        /// The namespace in which the event is defined. Allowed namespaces can vary by API.
         /// </summary>
         public string EventNamespace;
         /// <summary>
@@ -60,6 +66,10 @@ namespace PlayFab.EventsModels
     [Serializable]
     public class WriteEventsRequest : PlayFabRequestCommon
     {
+        /// <summary>
+        /// The optional custom tags associated with the request (e.g. build number, external trace identifiers, etc.).
+        /// </summary>
+        public Dictionary<string,string> CustomTags;
         /// <summary>
         /// Collection of events to write to PlayStream.
         /// </summary>

@@ -183,7 +183,7 @@ namespace PlayFab.PfEditor
 
                 if (GUILayout.Button("VIEW RELEASE NOTES", PlayFabEditorHelper.uiStyle.GetStyle("textButton"), GUILayout.MinHeight(32), GUILayout.MinWidth(200)))
                 {
-                    Application.OpenURL("https://api.playfab.com/releaseNotes/");
+                    Application.OpenURL("https://docs.microsoft.com/en-us/gaming/playfab/release-notes/");
                 }
 
                 GUILayout.FlexibleSpace();
@@ -215,7 +215,7 @@ namespace PlayFab.PfEditor
 
         public static void ImportLatestSDK()
         {
-            PlayFabEditorHttp.MakeDownloadCall("https://api.playfab.com/sdks/download/unity-via-edex", (fileName) =>
+            PlayFabEditorHttp.MakeDownloadCall("https://aka.ms/PlayFabUnitySdk", (fileName) =>
             {
                 Debug.Log("PlayFab SDK Install: Complete");
                 AssetDatabase.ImportPackage(fileName, false);
@@ -373,7 +373,7 @@ namespace PlayFab.PfEditor
                     FileUtil.DeleteFileOrDirectory(file);
             }
 
-            if (FileUtil.DeleteFileOrDirectory(PlayFabEditorPrefsSO.Instance.SdkPath))
+            if (!string.IsNullOrEmpty(PlayFabEditorPrefsSO.Instance.SdkPath) && FileUtil.DeleteFileOrDirectory(PlayFabEditorPrefsSO.Instance.SdkPath))
             {
                 PlayFabEditor.RaiseStateUpdate(PlayFabEditor.EdExStates.OnSuccess, "PlayFab SDK Removed!");
 
