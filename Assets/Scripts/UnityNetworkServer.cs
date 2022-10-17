@@ -38,9 +38,9 @@
 		private void AddRemoteServerListeners()
 		{
 			Debug.Log("[UnityNetworkServer].AddRemoteServerListeners");
-			NetworkServer.OnConnectedEvent = OnServerConnect;
-			NetworkServer.OnDisconnectedEvent = OnServerDisconnect;
-			NetworkServer.OnErrorEvent = OnServerError;
+			//NetworkServer.OnConnectedEvent = OnServerConnect;
+			//NetworkServer.OnDisconnectedEvent = OnServerDisconnect;
+			//NetworkServer.OnErrorEvent = OnServerError;
 			NetworkServer.RegisterHandler<ReceiveAuthenticateMessage>(OnReceiveAuthenticate);
 		}
 

@@ -339,7 +339,7 @@ namespace Mirror
                 Debug.LogError("Must set the Network Address field in the manager");
                 return;
             }
-            // Debug.Log($"NetworkManager StartClient address:{networkAddress}");
+            Debug.Log($"NetworkManager StartClient address:{networkAddress}");
 
             NetworkClient.Connect(networkAddress);
 
@@ -370,7 +370,7 @@ namespace Mirror
 
             RegisterClientMessages();
 
-            // Debug.Log($"NetworkManager StartClient address:{uri}");
+            Debug.Log($"NetworkManager StartClient address:{uri}");
             networkAddress = uri.Host;
 
             NetworkClient.Connect(uri);

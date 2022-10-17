@@ -175,7 +175,7 @@ namespace Mirror
         /// <summary>Connect client to a NetworkServer by Uri.</summary>
         public static void Connect(Uri uri)
         {
-            // Debug.Log($"Client Connect: {uri}");
+            Debug.Log($"Client Connect: {uri}");
             Debug.Assert(Transport.activeTransport != null, "There was no active transport when calling NetworkClient.Connect, If you are calling Connect manually then make sure to set 'Transport.activeTransport' first");
 
             RegisterSystemHandlers(false);
@@ -883,7 +883,7 @@ namespace Mirror
                 Debug.LogError($"assetId '{assetId}' is already used by prefab '{prefabs[assetId].name}'");
             }
 
-            // Debug.Log("RegisterSpawnHandler asset {assetId} {spawnHandler.GetMethodName()}/{unspawnHandler.GetMethodName()}");
+            Debug.Log("RegisterSpawnHandler asset {assetId} {spawnHandler.GetMethodName()}/{unspawnHandler.GetMethodName()}");
 
             spawnHandlers[assetId] = spawnHandler;
             unspawnHandlers[assetId] = unspawnHandler;
@@ -922,7 +922,7 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
-            // Debug.Log($"NetworkClient.Ready() called with connection {conn}");
+            Debug.Log($"NetworkClient.Ready() called with connection {connection}");
             if (ready)
             {
                 Debug.LogError("NetworkClient is already ready. It shouldn't be called twice.");
@@ -994,7 +994,7 @@ namespace Mirror
                 return false;
             }
 
-            // Debug.Log($"NetworkClient.AddPlayer() called with connection {readyConnection}");
+            Debug.Log($"NetworkClient.AddPlayer() called with connection {connection}");
             connection.Send(new AddPlayerMessage());
             return true;
         }
@@ -1189,7 +1189,7 @@ namespace Mirror
 
         internal static void OnObjectSpawnStarted(ObjectSpawnStartedMessage _)
         {
-            // Debug.Log("SpawnStarted");
+            Debug.Log("SpawnStarted");
             PrepareToSpawnSceneObjects();
             isSpawnFinished = false;
         }
@@ -1304,7 +1304,7 @@ namespace Mirror
 
         internal static void OnSpawn(SpawnMessage message)
         {
-            // Debug.Log($"Client spawn handler instantiating netId={msg.netId} assetID={msg.assetId} sceneId={msg.sceneId:X} pos={msg.position}");
+            Debug.Log($"Client spawn handler instantiating netId={message.netId} assetID={message.assetId} sceneId={message.sceneId:X} pos={message.position}");
             if (FindOrSpawnObject(message, out NetworkIdentity identity))
             {
                 ApplySpawnPayload(identity, message);
@@ -1370,7 +1370,7 @@ namespace Mirror
         // destroy /////////////////////////////////////////////////////////////
         static void DestroyObject(uint netId)
         {
-            // Debug.Log($"NetworkClient.OnObjDestroy netId: {netId}");
+            Debug.Log($"NetworkClient.OnObjDestroy netId: {netId}");
             if (spawned.TryGetValue(netId, out NetworkIdentity localObject) && localObject != null)
             {
                 if (localObject.isLocalPlayer)

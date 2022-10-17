@@ -105,6 +105,6 @@ public class ClientStartUp : MonoBehaviour
 
 	private void OnRequestMultiplayerServerError(PlayFabError error)
 	{
-		Debug.Log(error.ErrorDetails);
+		Debug.Log(error.ToString());
 	}
 }
