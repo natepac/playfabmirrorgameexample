@@ -1,15 +1,15 @@
-using UnityEngine;
-using System.Net;
 using System;
+using System.Net;
+using UnityEngine;
 using UnityEngine.Events;
 
 namespace Mirror.Discovery
 {
     [Serializable]
-    public class ServerFoundUnityEvent : UnityEvent<ServerResponse> { };
+    public class ServerFoundUnityEvent : UnityEvent<ServerResponse> {};
 
     [DisallowMultipleComponent]
-    [AddComponentMenu("Network/NetworkDiscovery")]
+    [AddComponentMenu("Network/Network Discovery")]
     public class NetworkDiscovery : NetworkDiscoveryBase<ServerRequest, ServerResponse>
     {
         #region Server
@@ -42,7 +42,7 @@ namespace Mirror.Discovery
         /// Override if you wish to provide more information to the clients
         /// such as the name of the host player
         /// </remarks>
-        /// <param name="request">Request comming from client</param>
+        /// <param name="request">Request coming from client</param>
         /// <param name="endpoint">Address of the client that sent the request</param>
         /// <returns>The message to be sent back to the client or null</returns>
         protected override ServerResponse ProcessRequest(ServerRequest request, IPEndPoint endpoint)

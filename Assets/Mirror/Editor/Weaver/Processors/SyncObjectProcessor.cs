@@ -1,122 +1,90 @@
+using System.Collections.Generic;
 using Mono.CecilX;
-using Mono.CecilX.Cil;
 
 namespace Mirror.Weaver
 {
     public static class SyncObjectProcessor
     {
-        /// <summary>
-        /// Generates the serialization and deserialization methods for a specified generic argument
-        /// </summary>
-        /// <param name="td">The type of the class that needs serialization methods</param>
-        /// <param name="genericArgument">Which generic argument to serialize,  0 is the first one</param>
-        /// <param name="serializeMethod">The name of the serialize method</param>
-        /// <param name="deserializeMethod">The name of the deserialize method</param>
-        public static void GenerateSerialization(TypeDefinition td, int genericArgument, string serializeMethod, string deserializeMethod)
+        // ulong = 64 bytes
+        const int SyncObjectsLimit = 64;
+
+        // Finds SyncObjects fields in a type
+        // Type should be a NetworkBehaviour
+        public static List<FieldDefinition> FindSyncObjectsFields(Writers writers, Readers readers, Logger Log, TypeDefinition td, ref bool WeavingFailed)
         {
-            // find item type
-            GenericInstanceType gt = (GenericInstanceType)td.BaseType;
-            if (gt.GenericArguments.Count <= genericArgument)
+            List<FieldDefinition> syncObjects = new List<FieldDefinition>();
+
+            foreach (FieldDefinition fd in td.Fields)
             {
-                Weaver.Error($"{td} should have {genericArgument} generic arguments");
-                return;
+                if (fd.FieldType.IsGenericParameter)
+                {
+                    // can't call .Resolve on generic ones
+                    continue;
+                }
+
+                if (fd.FieldType.Resolve().IsDerivedFrom<SyncObject>())
+                {
+                    if (fd.IsStatic)
+                    {
+                        Log.Error($"{fd.Name} cannot be static", fd);
+                        WeavingFailed = true;
+                        continue;
+                    }
+
+                    // SyncObjects always needs to be readonly to guarantee.
+                    // Weaver calls InitSyncObject on them for dirty bits etc.
+                    // Reassigning at runtime would cause undefined behaviour.
+                    // (C# 'readonly' is called 'initonly' in IL code.)
+                    //
+                    // NOTE: instead of forcing readonly, we could also scan all
+                    //       instructions for SyncObject assignments. this would
+                    //       make unit tests very difficult though.
+                    if (!fd.IsInitOnly)
+                    {
+                        // just a warning for now.
+                        // many people might still use non-readonly SyncObjects.
+                        Log.Warning($"{fd.Name} should have a 'readonly' keyword in front of the variable because {typeof(SyncObject)}s always need to be initialized by the Weaver.", fd);
+
+                        // only log, but keep weaving. no need to break projects.
+                        //WeavingFailed = true;
+                    }
+
+                    GenerateReadersAndWriters(writers, readers, fd.FieldType, ref WeavingFailed);
+
+                    syncObjects.Add(fd);
+                }
             }
-            TypeReference itemType = Weaver.CurrentAssembly.MainModule.ImportReference(gt.GenericArguments[genericArgument]);
 
-            Weaver.DLog(td, "SyncObjectProcessor Start item:" + itemType.FullName);
-
-            MethodReference writeItemFunc = GenerateSerialization(serializeMethod, td, itemType);
-            if (Weaver.WeavingFailed)
+            // SyncObjects dirty mask is 64 bit. can't sync more than 64.
+            if (syncObjects.Count > 64)
             {
-                return;
+                Log.Error($"{td.Name} has > {SyncObjectsLimit} SyncObjects (SyncLists etc). Consider refactoring your class into multiple components", td);
+                WeavingFailed = true;
             }
 
-            MethodReference readItemFunc = GenerateDeserialization(deserializeMethod, td, itemType);
 
-            if (readItemFunc == null || writeItemFunc == null)
-                return;
-
-            Weaver.DLog(td, "SyncObjectProcessor Done");
+            return syncObjects;
         }
 
-        // serialization of individual element
-        static MethodReference GenerateSerialization(string methodName, TypeDefinition td, TypeReference itemType)
+        // Generates serialization methods for synclists
+        static void GenerateReadersAndWriters(Writers writers, Readers readers, TypeReference tr, ref bool WeavingFailed)
         {
-            Weaver.DLog(td, "  GenerateSerialization");
-            foreach (MethodDefinition m in td.Methods)
+            if (tr is GenericInstanceType genericInstance)
             {
-                if (m.Name == methodName)
-                    return m;
+                foreach (TypeReference argument in genericInstance.GenericArguments)
+                {
+                    if (!argument.IsGenericParameter)
+                    {
+                        readers.GetReadFunc(argument, ref WeavingFailed);
+                        writers.GetWriteFunc(argument, ref WeavingFailed);
+                    }
+                }
             }
 
-            MethodDefinition serializeFunc = new MethodDefinition(methodName, MethodAttributes.Public |
-                    MethodAttributes.Virtual |
-                    MethodAttributes.Public |
-                    MethodAttributes.HideBySig,
-                    Weaver.voidType);
-
-            serializeFunc.Parameters.Add(new ParameterDefinition("writer", ParameterAttributes.None, Weaver.CurrentAssembly.MainModule.ImportReference(Weaver.NetworkWriterType)));
-            serializeFunc.Parameters.Add(new ParameterDefinition("item", ParameterAttributes.None, itemType));
-            ILProcessor serWorker = serializeFunc.Body.GetILProcessor();
-
-            if (itemType.IsGenericInstance)
+            if (tr != null)
             {
-                Weaver.Error($"{td} cannot have generic elements {itemType}");
-                return null;
+                GenerateReadersAndWriters(writers, readers, tr.Resolve().BaseType, ref WeavingFailed);
             }
-
-            MethodReference writeFunc = Writers.GetWriteFunc(itemType);
-            if (writeFunc != null)
-            {
-                serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
-                serWorker.Append(serWorker.Create(OpCodes.Ldarg_2));
-                serWorker.Append(serWorker.Create(OpCodes.Call, writeFunc));
-            }
-            else
-            {
-                Weaver.Error($"{td} cannot have item of type {itemType}.  Use a type supported by mirror instead");
-                return null;
-            }
-            serWorker.Append(serWorker.Create(OpCodes.Ret));
-
-            td.Methods.Add(serializeFunc);
-            return serializeFunc;
-        }
-
-        static MethodReference GenerateDeserialization(string methodName, TypeDefinition td, TypeReference itemType)
-        {
-            Weaver.DLog(td, "  GenerateDeserialization");
-            foreach (MethodDefinition m in td.Methods)
-            {
-                if (m.Name == methodName)
-                    return m;
-            }
-
-            MethodDefinition deserializeFunction = new MethodDefinition(methodName, MethodAttributes.Public |
-                    MethodAttributes.Virtual |
-                    MethodAttributes.Public |
-                    MethodAttributes.HideBySig,
-                    itemType);
-
-            deserializeFunction.Parameters.Add(new ParameterDefinition("reader", ParameterAttributes.None, Weaver.CurrentAssembly.MainModule.ImportReference(Weaver.NetworkReaderType)));
-
-            ILProcessor serWorker = deserializeFunction.Body.GetILProcessor();
-
-            MethodReference readerFunc = Readers.GetReadFunc(itemType);
-            if (readerFunc != null)
-            {
-                serWorker.Append(serWorker.Create(OpCodes.Ldarg_1));
-                serWorker.Append(serWorker.Create(OpCodes.Call, readerFunc));
-                serWorker.Append(serWorker.Create(OpCodes.Ret));
-            }
-            else
-            {
-                Weaver.Error($"{td} cannot have item of type {itemType}.  Use a type supported by mirror instead");
-                return null;
-            }
-
-            td.Methods.Add(deserializeFunction);
-            return deserializeFunction;
         }
     }
 }

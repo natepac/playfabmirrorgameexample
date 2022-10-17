@@ -1,5 +1,5 @@
 using System;
-using UnityEngine;
+using System.Runtime.CompilerServices;
 
 namespace Mirror
 {
@@ -7,27 +7,19 @@ namespace Mirror
     {
         public override string address => "";
 
-        internal override bool Send(ArraySegment<byte> segment, int channelId = Channels.DefaultReliable)
-        {
-			if (logNetworkMessages) Debug.Log("ConnectionSend " + this + " bytes:" + BitConverter.ToString(segment.Array, segment.Offset, segment.Count));
+        // Send stage three: hand off to transport
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        protected override void SendToTransport(ArraySegment<byte> segment, int channelId = Channels.Reliable) =>
+            Transport.activeTransport.ClientSend(segment, channelId);
 
-            // validate packet size first.
-            if (ValidatePacketSize(segment, channelId))
-            {
-                return Transport.activeTransport.ClientSend(channelId, segment);
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Disconnects this connection.
-        /// </summary>
+        /// <summary>Disconnects this connection.</summary>
         public override void Disconnect()
         {
             // set not ready and handle clientscene disconnect in any case
             // (might be client or host mode here)
+            // TODO remove redundant state. have one source of truth for .ready!
             isReady = false;
-            ClientScene.HandleClientDisconnect(this);
+            NetworkClient.ready = false;
             Transport.activeTransport.ClientDisconnect();
         }
     }
