@@ -589,7 +589,6 @@ GameObject:
   m_Component:
   - component: {fileID: 653613743}
   - component: {fileID: 653613744}
-  - component: {fileID: 653613745}
   - component: {fileID: 653613746}
   m_Layer: 0
   m_Name: NetworkManager
@@ -631,7 +630,7 @@ MonoBehaviour:
   serverTickRate: 30
   offlineScene: 
   onlineScene: 
-  transport: {fileID: 0}
+  transport: {fileID: 770672722}
   networkAddress: localhost
   maxConnections: 4
   authenticator: {fileID: 0}
@@ -640,18 +639,6 @@ MonoBehaviour:
   autoCreatePlayer: 1
   playerSpawnMethod: 0
   spawnPrefabs: []
---- !u!114 &653613745
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 653613742}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 330c9aab13d2d42069c6ebbe582b73ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &653613746
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1702,8 +1689,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   buildType: 1
-  buildId: 554e1951-61a2-4b2c-ac5a-15d889491f6e
-  ipAddress: 4.227.218.245
+  buildId: 
+  ipAddress: 
   port: 30000
   playFabDebugging: 0
 --- !u!4 &1995558417

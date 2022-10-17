@@ -159,7 +159,7 @@ namespace Mirror
         /// <summary>Connect client to a NetworkServer by address.</summary>
         public static void Connect(string address)
         {
-            // Debug.Log($"Client Connect: {address}");
+            Debug.Log($"Client Connect: {address}");
             Debug.Assert(Transport.activeTransport != null, "There was no active transport when calling NetworkClient.Connect, If you are calling Connect manually then make sure to set 'Transport.activeTransport' first");
 
             RegisterSystemHandlers(false);
