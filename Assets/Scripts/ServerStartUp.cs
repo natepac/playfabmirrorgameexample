@@ -106,7 +106,7 @@ public class ServerStartUp : MonoBehaviour
 		Debug.Log("Server is shutting down");
 		foreach (var conn in UNetServer.Connections)
 		{
-			conn.Connection.Send(CustomGameServerMessageTypes.ShutdownMessage, new ShutdownMessage());
+			conn.Connection.Send(new ShutdownMessage());
 		}
 		StartCoroutine(ShutdownServer());
 	}
@@ -122,7 +122,7 @@ public class ServerStartUp : MonoBehaviour
 		Debug.LogFormat("Maintenance scheduled for: {0}", NextScheduledMaintenanceUtc.Value.ToLongDateString());
 		foreach (var conn in UNetServer.Connections)
 		{
-			conn.Connection.Send(CustomGameServerMessageTypes.ShutdownMessage, new MaintenanceMessage()
+			conn.Connection.Send(new MaintenanceMessage()
 			{
 				ScheduledMaintenanceUTC = (DateTime)NextScheduledMaintenanceUtc
 			});

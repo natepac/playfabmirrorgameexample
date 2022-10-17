@@ -38,10 +38,10 @@
 		private void AddRemoteServerListeners()
 		{
 			Debug.Log("[UnityNetworkServer].AddRemoteServerListeners");
-			NetworkServer.RegisterHandler(MsgType.Connect, OnServerConnect);
-			NetworkServer.RegisterHandler(MsgType.Disconnect, OnServerDisconnect);
-			NetworkServer.RegisterHandler(MsgType.Error, OnServerError);
-			NetworkServer.RegisterHandler(CustomGameServerMessageTypes.ReceiveAuthenticate, OnReceiveAuthenticate);
+			NetworkServer.OnConnectedEvent = OnServerConnect;
+			NetworkServer.OnDisconnectedEvent = OnServerDisconnect;
+			NetworkServer.OnErrorEvent = OnServerError;
+			NetworkServer.RegisterHandler<ReceiveAuthenticateMessage>(OnReceiveAuthenticate);
 		}
 
 		public void StartServer()
@@ -54,57 +54,45 @@
 			NetworkServer.Shutdown();
 		}
 
-		private void OnReceiveAuthenticate(NetworkMessage netMsg)
+		private void OnReceiveAuthenticate( NetworkConnection nconn, ReceiveAuthenticateMessage message )
 		{
-			var conn = _connections.Find(c => c.ConnectionId == netMsg.conn.connectionId);
+			var conn = _connections.Find(c => c.ConnectionId == nconn.connectionId);
 			if (conn != null)
 			{
-				var message = netMsg.ReadMessage<ReceiveAuthenticateMessage>();
 				conn.PlayFabId = message.PlayFabId;
 				conn.IsAuthenticated = true;
 				OnPlayerAdded.Invoke(message.PlayFabId);
 			}
 		}
 
-		private void OnServerConnect(NetworkMessage netMsg)
+		private void OnServerConnect( NetworkConnection connection )
 		{
 			Debug.LogWarning("Client Connected");
-			var conn = _connections.Find(c => c.ConnectionId == netMsg.conn.connectionId);
+			var conn = _connections.Find(c => c.ConnectionId == connection.connectionId);
 			if (conn == null)
 			{
 				_connections.Add(new UnityNetworkConnection()
 				{
-					Connection = netMsg.conn,
-					ConnectionId = netMsg.conn.connectionId,
+					Connection = connection,
+					ConnectionId = connection.connectionId,
 					LobbyId = PlayFabMultiplayerAgentAPI.SessionConfig.SessionId
 				});
 			}
 		}
 
-		private void OnServerError(NetworkMessage netMsg)
+		private void OnServerError( NetworkConnection conn, TransportError error, string reason )
 		{
-			try
-			{
-				var error = netMsg.ReadMessage<ErrorMessage>();
-				if (error.value != 0)
-				{
-					Debug.Log(string.Format("Unity Network Connection Status: code - {0}", error.value));
-				}
-			}
-			catch (Exception)
-			{
-				Debug.Log("Unity Network Connection Status, but we could not get the reason, check the Unity Logs for more info.");
-			}
+			Debug.LogFormat( "Unity Network Connection Status: error - {0}, reason: {1}", error.ToString(), reason );
 		}
 
-		private void OnServerDisconnect(NetworkMessage netMsg)
+		private void OnServerDisconnect( NetworkConnection connection )
 		{
-			var conn = _connections.Find(c => c.ConnectionId == netMsg.conn.connectionId);
+			var conn = _connections.Find(c => c.ConnectionId == connection.connectionId);
 			if (conn != null)
 			{
-				if (!string.IsNullOrEmpty(conn.PlayFabId))
+				if (!string.IsNullOrEmpty( conn.PlayFabId))
 				{
-					OnPlayerRemoved.Invoke(conn.PlayFabId);
+					OnPlayerRemoved.Invoke( conn.PlayFabId);
 				}
 				_connections.Remove(conn);
 			}
@@ -129,29 +117,38 @@
 		public const short MaintenanceMessage = 902;
 	}
 
-	public class ReceiveAuthenticateMessage : MessageBase
+	public struct ReceiveAuthenticateMessage : NetworkMessage
 	{
 		public string PlayFabId;
 	}
 
-	public class ShutdownMessage : MessageBase { }
+	public struct ShutdownMessage : NetworkMessage { }
 
 	[Serializable]
-	public class MaintenanceMessage : MessageBase
+	public struct MaintenanceMessage : NetworkMessage
 	{
 		public DateTime ScheduledMaintenanceUTC;
+	}
 
-		public override void Deserialize(NetworkReader reader)
+	public static class MaintenanceMessageFunctions
+	{
+		public static MaintenanceMessage Deserialize( this NetworkReader reader )
 		{
-			var json = PlayFab.PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
-			ScheduledMaintenanceUTC = json.DeserializeObject<DateTime>(reader.ReadString());
+			var json = PlayFab.PluginManager.GetPlugin<ISerializerPlugin>( PluginContract.PlayFab_Serializer );
+			DateTime ScheduledMaintenanceUTC = json.DeserializeObject<DateTime>( reader.ReadString() );
+			MaintenanceMessage value = new MaintenanceMessage
+			{
+				ScheduledMaintenanceUTC = ScheduledMaintenanceUTC
+			};
+
+			return value;
 		}
 
-		public override void Serialize(NetworkWriter writer)
+		public static void Serialize( this NetworkWriter writer, MaintenanceMessage value )
 		{
-			var json = PlayFab.PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
-			var str = json.SerializeObject(ScheduledMaintenanceUTC);
-			writer.Write(str);
+			var json = PlayFab.PluginManager.GetPlugin<ISerializerPlugin>( PluginContract.PlayFab_Serializer );
+			var str = json.SerializeObject( value.ScheduledMaintenanceUTC );
+			writer.Write( str );
 		}
 	}
 }

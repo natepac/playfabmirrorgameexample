@@ -5,12 +5,12 @@ using Mirror;
 
 public class ExampleNetworkAuthenticator : NetworkAuthenticator
 {
-	public override void OnServerAuthenticate(NetworkConnection conn)
+	public override void OnServerAuthenticate( NetworkConnectionToClient conn )
 	{
 
 	}
 
-	public override void OnClientAuthenticate(NetworkConnection conn)
+	public override void OnClientAuthenticate()
 	{
 
 	}

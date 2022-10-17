@@ -70,7 +70,7 @@ namespace Mirror
             ushort serverPort = uri.IsDefaultPort ? port : (ushort)uri.Port;
             client.Connect(uri.Host, serverPort);
         }
-        public override bool ClientSend(int channelId, ArraySegment<byte> segment) => client.Send(segment);
+        public override void ClientSend(ArraySegment<byte> segment, int channelId) => client.Send(segment);
         void ProcessClientMessages()
         {
             client.GetNextMessages(queue);
@@ -83,7 +83,7 @@ namespace Mirror
                         OnClientConnected.Invoke();
                         break; // breaks switch, not while
                     case Apathy.EventType.Data:
-                        OnClientDataReceived.Invoke(message.data, Channels.DefaultReliable);
+                        OnClientDataReceived.Invoke(message.data, Channels.Reliable);
                         break; // breaks switch, not while
                     case Apathy.EventType.Disconnected:
                         OnClientDisconnected.Invoke();
@@ -118,14 +118,9 @@ namespace Mirror
         }
         public override bool ServerActive() => server.Active;
         public override void ServerStart() => server.Start(port);
-        public override bool ServerSend(List<int> connectionIds, int channelId, ArraySegment<byte> segment)
-        {
-            // send to all
-            bool result = true;
-            foreach (int connectionId in connectionIds)
-                result &= server.Send(connectionId, segment);
-            return result;
-        }
+
+        public override void ServerSend( int connectionId, ArraySegment<byte> segment, int channelId ) => server.Send( connectionId, segment );
+
         public void ProcessServerMessages()
         {
             if (server.Active)
@@ -140,7 +135,7 @@ namespace Mirror
                             OnServerConnected.Invoke(message.connectionId);
                             break; // breaks switch, not while
                         case Apathy.EventType.Data:
-                            OnServerDataReceived.Invoke(message.connectionId, message.data, Channels.DefaultReliable);
+                            OnServerDataReceived.Invoke(message.connectionId, message.data, Channels.Reliable);
                             break; // breaks switch, not while
                         case Apathy.EventType.Disconnected:
                             OnServerDisconnected.Invoke(message.connectionId);
@@ -149,7 +144,7 @@ namespace Mirror
                 }
             }
         }
-        public override bool ServerDisconnect(int connectionId) => server.Disconnect(connectionId);
+        public override void ServerDisconnect(int connectionId) => server.Disconnect(connectionId);
         public override string ServerGetClientAddress(int connectionId) => server.GetClientAddress(connectionId);
         public override void ServerStop() => server.Stop();
 
