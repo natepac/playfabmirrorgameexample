@@ -46,7 +46,7 @@
 
 		public void StartServer()
 		{
-			NetworkServer.Listen(Port);
+			NetworkServer.Listen(MaxConnections);
 		}
 
 		private void OnApplicationQuit()
