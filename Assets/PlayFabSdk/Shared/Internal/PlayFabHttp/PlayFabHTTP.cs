@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using PlayFab.Json;
 using PlayFab.Public;
 using PlayFab.SharedModels;
 using UnityEngine;
@@ -61,8 +60,6 @@ namespace PlayFab.Internal
             var transport = PluginManager.GetPlugin<ITransportPlugin>(PluginContract.PlayFab_Transport);
             if (transport.IsInitialized)
                 return;
-
-            Application.runInBackground = true; // Http requests respond even if you lose focus
 
             transport.Initialize();
             CreateInstance(); // Invoke the SingletonMonoBehaviour
@@ -187,7 +184,7 @@ namespace PlayFab.Internal
             reqContainer.RequestHeaders["X-PlayFabSDK"] = PlayFabSettings.VersionString; // Tell PlayFab which SDK this is
             switch (authType)
             {
-#if ENABLE_PLAYFABSERVER_API || ENABLE_PLAYFABADMIN_API || UNITY_EDITOR
+#if ENABLE_PLAYFABSERVER_API || ENABLE_PLAYFABADMIN_API || UNITY_EDITOR || ENABLE_PLAYFAB_SECRETKEY
                 case AuthType.DevSecretKey:
                     if (apiSettings.DeveloperSecretKey == null) throw new PlayFabException(PlayFabExceptionCode.DeveloperKeyNotSet, "DeveloperSecretKey is not found in Request, Server Instance or PlayFabSettings");
                     reqContainer.RequestHeaders["X-SecretKey"] = apiSettings.DeveloperSecretKey; break;
@@ -240,32 +237,28 @@ namespace PlayFab.Internal
             var result = reqContainer.ApiResult;
 
 #if !DISABLE_PLAYFABENTITY_API
+
             var entRes = result as AuthenticationModels.GetEntityTokenResponse;
             if (entRes != null)
             {
                 PlayFabSettings.staticPlayer.EntityToken = entRes.EntityToken;
             }
+
 #endif
 #if !DISABLE_PLAYFABCLIENT_API
             var logRes = result as ClientModels.LoginResult;
             var regRes = result as ClientModels.RegisterPlayFabUserResult;
             if (logRes != null)
             {
-                logRes.AuthenticationContext = new PlayFabAuthenticationContext(logRes.SessionTicket, logRes.EntityToken.EntityToken, logRes.PlayFabId);
+                logRes.AuthenticationContext = new PlayFabAuthenticationContext(logRes.SessionTicket, logRes.EntityToken.EntityToken, logRes.PlayFabId, logRes.EntityToken.Entity.Id, logRes.EntityToken.Entity.Type);
                 if (reqContainer.context != null)
-                {
-                    reqContainer.context.ClientSessionTicket = logRes.SessionTicket;
-                    reqContainer.context.EntityToken = logRes.EntityToken.EntityToken;
-                }
+                    reqContainer.context.CopyFrom(logRes.AuthenticationContext);
             }
             else if (regRes != null)
             {
-                regRes.AuthenticationContext = new PlayFabAuthenticationContext(regRes.SessionTicket, regRes.EntityToken.EntityToken, regRes.PlayFabId);
+                regRes.AuthenticationContext = new PlayFabAuthenticationContext(regRes.SessionTicket, regRes.EntityToken.EntityToken, regRes.PlayFabId, regRes.EntityToken.Entity.Id, regRes.EntityToken.Entity.Type);
                 if (reqContainer.context != null)
-                {
-                    reqContainer.context.ClientSessionTicket = regRes.SessionTicket;
-                    reqContainer.context.EntityToken = regRes.EntityToken.EntityToken;
-                }
+                    reqContainer.context.CopyFrom(regRes.AuthenticationContext);
             }
 #endif
         }
@@ -389,13 +382,13 @@ namespace PlayFab.Internal
         #region Helpers
         protected internal static PlayFabError GeneratePlayFabError(string apiEndpoint, string json, object customData)
         {
-            JsonObject errorDict = null;
+            Dictionary<string, object> errorDict = null;
             Dictionary<string, List<string>> errorDetails = null;
             var serializer = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
             try
             {
                 // Deserialize the error
-                errorDict = serializer.DeserializeObject<JsonObject>(json);
+                errorDict = serializer.DeserializeObject<Dictionary<string, object>>(json);
             }
             catch (Exception) { /* Unusual, but shouldn't actually matter */ }
             try
@@ -414,7 +407,8 @@ namespace PlayFab.Internal
                 Error = errorDict != null && errorDict.ContainsKey("errorCode") ? (PlayFabErrorCode)Convert.ToInt32(errorDict["errorCode"]) : PlayFabErrorCode.ServiceUnavailable,
                 ErrorMessage = errorDict != null && errorDict.ContainsKey("errorMessage") ? (string)errorDict["errorMessage"] : json,
                 ErrorDetails = errorDetails,
-                CustomData = customData
+                CustomData = customData,
+                RetryAfterSeconds = errorDict != null && errorDict.ContainsKey("retryAfterSeconds") ? Convert.ToUInt32(errorDict["retryAfterSeconds"]) : (uint?)null,
             };
         }
 
@@ -453,7 +447,7 @@ namespace PlayFab.Internal
             }
         }
 
-        protected internal static void ClearAllEvents()
+        public static void ClearAllEvents()
         {
             ApiProcessingEventHandler = null;
             ApiProcessingErrorEventHandler = null;
@@ -468,7 +462,7 @@ namespace PlayFab.Internal
             }
         }
 #endif
-#endregion
+        #endregion
         private readonly Queue<IEnumerator> _injectedCoroutines = new Queue<IEnumerator>();
         private readonly Queue<Action> _injectedAction = new Queue<Action>();
 

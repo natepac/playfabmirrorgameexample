@@ -1,12 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 
 namespace Mirror
 {
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public abstract class SyncSet<T> : ISet<T>, SyncObject
+    public class SyncSet<T> : SyncObject, ISet<T>
     {
         public delegate void SyncSetChanged(Operation op, T item);
 
@@ -29,26 +27,35 @@ namespace Mirror
             internal T item;
         }
 
+        // list of changes.
+        // -> insert/delete/clear is only ONE change
+        // -> changing the same slot 10x caues 10 changes.
+        // -> note that this grows until next sync(!)
+        // TODO Dictionary<key, change> to avoid ever growing changes / redundant changes!
         readonly List<Change> changes = new List<Change>();
+
         // how many changes we need to ignore
         // this is needed because when we initialize the list,
         // we might later receive changes that have already been applied
         // so we need to skip them
         int changesAhead;
 
-        protected SyncSet(ISet<T> objects)
+        public SyncSet(ISet<T> objects)
         {
             this.objects = objects;
         }
 
-        protected virtual void SerializeItem(NetworkWriter writer, T item) { }
-        protected virtual T DeserializeItem(NetworkReader reader) => default;
-
-        public bool IsDirty => changes.Count > 0;
+        public override void Reset()
+        {
+            IsReadOnly = false;
+            changes.Clear();
+            changesAhead = 0;
+            objects.Clear();
+        }
 
         // throw away all the changes
-        // this should be called after a successfull sync
-        public void Flush() => changes.Clear();
+        // this should be called after a successful sync
+        public override void ClearChanges() => changes.Clear();
 
         void AddOperation(Operation op, T item)
         {
@@ -63,34 +70,38 @@ namespace Mirror
                 item = item
             };
 
-            changes.Add(change);
+            if (IsRecording())
+            {
+                changes.Add(change);
+                OnDirty?.Invoke();
+            }
 
             Callback?.Invoke(op, item);
         }
 
         void AddOperation(Operation op) => AddOperation(op, default);
 
-        public void OnSerializeAll(NetworkWriter writer)
+        public override void OnSerializeAll(NetworkWriter writer)
         {
             // if init,  write the full list content
-            writer.WritePackedUInt32((uint)objects.Count);
+            writer.WriteUInt((uint)objects.Count);
 
             foreach (T obj in objects)
             {
-                SerializeItem(writer, obj);
+                writer.Write(obj);
             }
 
             // all changes have been applied already
             // thus the client will need to skip all the pending changes
             // or they would be applied again.
             // So we write how many changes are pending
-            writer.WritePackedUInt32((uint)changes.Count);
+            writer.WriteUInt((uint)changes.Count);
         }
 
-        public void OnSerializeDelta(NetworkWriter writer)
+        public override void OnSerializeDelta(NetworkWriter writer)
         {
             // write all the queued up changes
-            writer.WritePackedUInt32((uint)changes.Count);
+            writer.WriteUInt((uint)changes.Count);
 
             for (int i = 0; i < changes.Count; i++)
             {
@@ -100,48 +111,48 @@ namespace Mirror
                 switch (change.operation)
                 {
                     case Operation.OP_ADD:
-                        SerializeItem(writer, change.item);
+                        writer.Write(change.item);
                         break;
 
                     case Operation.OP_CLEAR:
                         break;
 
                     case Operation.OP_REMOVE:
-                        SerializeItem(writer, change.item);
+                        writer.Write(change.item);
                         break;
                 }
             }
         }
 
-        public void OnDeserializeAll(NetworkReader reader)
+        public override void OnDeserializeAll(NetworkReader reader)
         {
             // This list can now only be modified by synchronization
             IsReadOnly = true;
 
             // if init,  write the full list content
-            int count = (int)reader.ReadPackedUInt32();
+            int count = (int)reader.ReadUInt();
 
             objects.Clear();
             changes.Clear();
 
             for (int i = 0; i < count; i++)
             {
-                T obj = DeserializeItem(reader);
+                T obj = reader.Read<T>();
                 objects.Add(obj);
             }
 
             // We will need to skip all these changes
             // the next time the list is synchronized
             // because they have already been applied
-            changesAhead = (int)reader.ReadPackedUInt32();
+            changesAhead = (int)reader.ReadUInt();
         }
 
-        public void OnDeserializeDelta(NetworkReader reader)
+        public override void OnDeserializeDelta(NetworkReader reader)
         {
             // This list can now only be modified by synchronization
             IsReadOnly = true;
 
-            int changesCount = (int)reader.ReadPackedUInt32();
+            int changesCount = (int)reader.ReadUInt();
 
             for (int i = 0; i < changesCount; i++)
             {
@@ -155,7 +166,7 @@ namespace Mirror
                 switch (operation)
                 {
                     case Operation.OP_ADD:
-                        item = DeserializeItem(reader);
+                        item = reader.Read<T>();
                         if (apply)
                         {
                             objects.Add(item);
@@ -170,7 +181,7 @@ namespace Mirror
                         break;
 
                     case Operation.OP_REMOVE:
-                        item = DeserializeItem(reader);
+                        item = reader.Read<T>();
                         if (apply)
                         {
                             objects.Remove(item);
@@ -285,6 +296,7 @@ namespace Mirror
 
         public bool SetEquals(IEnumerable<T> other) => objects.SetEquals(other);
 
+        // custom implementation so we can do our own Clear/Add/Remove for delta
         public void SymmetricExceptWith(IEnumerable<T> other)
         {
             if (other == this)
@@ -303,6 +315,7 @@ namespace Mirror
             }
         }
 
+        // custom implementation so we can do our own Clear/Add/Remove for delta
         public void UnionWith(IEnumerable<T> other)
         {
             if (other != this)
@@ -315,17 +328,19 @@ namespace Mirror
         }
     }
 
-    public abstract class SyncHashSet<T> : SyncSet<T>
+    public class SyncHashSet<T> : SyncSet<T>
     {
-        protected SyncHashSet(IEqualityComparer<T> comparer = null) : base(new HashSet<T>(comparer ?? EqualityComparer<T>.Default)) { }
+        public SyncHashSet() : this(EqualityComparer<T>.Default) {}
+        public SyncHashSet(IEqualityComparer<T> comparer) : base(new HashSet<T>(comparer ?? EqualityComparer<T>.Default)) {}
 
         // allocation free enumerator
         public new HashSet<T>.Enumerator GetEnumerator() => ((HashSet<T>)objects).GetEnumerator();
     }
 
-    public abstract class SyncSortedSet<T> : SyncSet<T>
+    public class SyncSortedSet<T> : SyncSet<T>
     {
-        protected SyncSortedSet(IComparer<T> comparer = null) : base(new SortedSet<T>(comparer ?? Comparer<T>.Default)) { }
+        public SyncSortedSet() : this(Comparer<T>.Default) {}
+        public SyncSortedSet(IComparer<T> comparer) : base(new SortedSet<T>(comparer ?? Comparer<T>.Default)) {}
 
         // allocation free enumerator
         public new SortedSet<T>.Enumerator GetEnumerator() => ((SortedSet<T>)objects).GetEnumerator();

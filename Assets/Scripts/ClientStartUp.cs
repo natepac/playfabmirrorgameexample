@@ -74,7 +74,7 @@ public class ClientStartUp : MonoBehaviour
 		RequestMultiplayerServerRequest requestData = new RequestMultiplayerServerRequest();
 		requestData.BuildId = configuration.buildId;
 		requestData.SessionId = System.Guid.NewGuid().ToString();
-		requestData.PreferredRegions = new List<AzureRegion>() { AzureRegion.EastUs };
+		requestData.PreferredRegions = new List<string>() { AzureRegion.EastUs.ToString() };
 		PlayFabMultiplayerAPI.RequestMultiplayerServer(requestData, OnRequestMultiplayerServer, OnRequestMultiplayerServerError);
 	}
 
@@ -105,6 +105,6 @@ public class ClientStartUp : MonoBehaviour
 
 	private void OnRequestMultiplayerServerError(PlayFabError error)
 	{
-		Debug.Log(error.ErrorDetails);
+		Debug.Log(error.ToString());
 	}
 }

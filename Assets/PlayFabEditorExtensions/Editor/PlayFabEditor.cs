@@ -78,6 +78,18 @@ namespace PlayFab.PfEditor
             PlayFabEditorPrefsSO.Instance.PanelIsShown = true;
         }
 
+        [MenuItem("Window/PlayFab/Forum")]
+        static void PlayFabForums()
+        {
+            Application.OpenURL("https://community.playfab.com/index.html");
+        }
+
+        [MenuItem("Window/PlayFab/Provide Feedback")]
+        static void PlayFabFeedback()
+        {
+            Application.OpenURL("https://community.playfab.com/index.html");
+        }
+
         [InitializeOnLoad]
         public static class Startup
         {
@@ -362,7 +374,7 @@ namespace PlayFab.PfEditor
 
             if (DateTime.Today > threshold)
             {
-                PlayFabEditorHttp.MakeGitHubApiCall("https://api.github.com/repos/PlayFab/UnityEditorExtensions/git/refs/tags", (version) =>
+                PlayFabEditorHttp.MakeGitHubApiCall("https://api.github.com/repos/PlayFab/UnitySDK/git/refs/tags", (version) =>
                 {
                     latestEdExVersion = version ?? "Unknown";
                     PlayFabEditorPrefsSO.Instance.EdSet_latestEdExVersion = latestEdExVersion;
@@ -422,7 +434,7 @@ namespace PlayFab.PfEditor
 
         private static void ImportLatestEdEx()
         {
-            PlayFabEditorHttp.MakeDownloadCall("https://api.playfab.com/sdks/download/unity-edex-upgrade", (fileName) =>
+            PlayFabEditorHttp.MakeDownloadCall("https://aka.ms/PlayFabUnityEdEx", (fileName) =>
             {
                 AssetDatabase.ImportPackage(fileName, false);
                 Debug.Log("PlayFab EdEx Upgrade: Complete");

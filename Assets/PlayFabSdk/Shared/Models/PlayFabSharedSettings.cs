@@ -7,8 +7,9 @@ using PlayFab;
 public class PlayFabSharedSettings : ScriptableObject
 {
     public string TitleId;
+
     internal string VerticalName = null;
-#if ENABLE_PLAYFABSERVER_API || ENABLE_PLAYFABADMIN_API || UNITY_EDITOR
+#if ENABLE_PLAYFABSERVER_API || ENABLE_PLAYFABADMIN_API || UNITY_EDITOR || ENABLE_PLAYFAB_SECRETKEY
     public string DeveloperSecretKey;
 #endif
     public string ProductionEnvironmentUrl = "";
@@ -19,16 +20,11 @@ public class PlayFabSharedSettings : ScriptableObject
     public WebRequestType RequestType = WebRequestType.UnityWww;
 #endif
 
-    public string AdvertisingIdType;
-    public string AdvertisingIdValue;
-
-    public bool DisableAdvertising;
     public bool DisableDeviceInfo;
     public bool DisableFocusTimeCollection;
 
     public int RequestTimeout = 2000;
     public bool RequestKeepAlive = true;
-    public bool CompressApiData = true;
 
     public PlayFabLogLevel LogLevel = PlayFabLogLevel.Warning | PlayFabLogLevel.Error;
     public string LoggerHost = "";

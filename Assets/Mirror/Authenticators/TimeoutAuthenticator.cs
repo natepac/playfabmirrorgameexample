@@ -7,7 +7,7 @@ namespace Mirror.Authenticators
     /// An authenticator that disconnects connections if they don't
     /// authenticate within a specified time limit.
     /// </summary>
-    [AddComponentMenu("Network/Authenticators/TimeoutAuthenticator")]
+    [AddComponentMenu("Network/ Authenticators/Timeout Authenticator")]
     public class TimeoutAuthenticator : NetworkAuthenticator
     {
         public NetworkAuthenticator authenticator;
@@ -17,34 +17,52 @@ namespace Mirror.Authenticators
 
         public void Awake()
         {
-            authenticator.OnClientAuthenticated.AddListener(connection => OnClientAuthenticated.Invoke(connection));
             authenticator.OnServerAuthenticated.AddListener(connection => OnServerAuthenticated.Invoke(connection));
+            authenticator.OnClientAuthenticated.AddListener(OnClientAuthenticated.Invoke);
         }
 
-        public override void OnClientAuthenticate(NetworkConnection conn)
+        public override void OnStartServer()
         {
-            authenticator.OnClientAuthenticate(conn);
-            if (timeout > 0)
-                StartCoroutine(BeginAuthentication(conn));
+            authenticator.OnStartServer();
         }
 
-        public override void OnServerAuthenticate(NetworkConnection conn)
+        public override void OnStopServer()
+        {
+            authenticator.OnStopServer();
+        }
+
+        public override void OnStartClient()
+        {
+            authenticator.OnStartClient();
+        }
+
+        public override void OnStopClient()
+        {
+            authenticator.OnStopClient();
+        }
+
+        public override void OnServerAuthenticate(NetworkConnectionToClient conn)
         {
             authenticator.OnServerAuthenticate(conn);
             if (timeout > 0)
                 StartCoroutine(BeginAuthentication(conn));
         }
 
+        public override void OnClientAuthenticate()
+        {
+            authenticator.OnClientAuthenticate();
+            if (timeout > 0)
+                StartCoroutine(BeginAuthentication(NetworkClient.connection));
+        }
+
         IEnumerator BeginAuthentication(NetworkConnection conn)
         {
-            if (LogFilter.Debug) Debug.Log($"Authentication countdown started {conn} {timeout}");
-
+            //Debug.Log($"Authentication countdown started {conn} {timeout}");
             yield return new WaitForSecondsRealtime(timeout);
 
             if (!conn.isAuthenticated)
             {
-                if (LogFilter.Debug) Debug.Log($"Authentication Timeout {conn}");
-
+                Debug.LogError($"Authentication Timeout - Disconnecting {conn}");
                 conn.Disconnect();
             }
         }

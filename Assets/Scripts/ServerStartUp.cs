@@ -23,6 +23,10 @@ public class ServerStartUp : MonoBehaviour
 		{
 			StartRemoteServer();
 		}
+		else if( configuration.buildType == BuildType.LOCAL_SERVER )
+		{
+			networkManager.StartServer();
+		}
 	}
 
 	public void OnStartLocalServerButtonClick()
@@ -65,8 +69,25 @@ public class ServerStartUp : MonoBehaviour
 
 	private void OnServerActive()
 	{
-		UNetServer.StartServer();
-		Debug.Log("Server Started From Agent Activation");
+		Debug.Log( "Server Started From Agent Activation" );
+
+		TelepathyTransport telepathyTransport = ( TelepathyTransport )Transport.activeTransport;
+		if( telepathyTransport != null )
+        {
+			telepathyTransport.port = configuration.port;
+			var connectionInfo = PlayFabMultiplayerAgentAPI.GetGameServerConnectionInfo();
+			if( connectionInfo != null )
+			{
+				// Set the server to the first available port
+				foreach( var port in connectionInfo.GamePortsConfiguration )
+				{
+					telepathyTransport.port = ( ushort )port.ServerListeningPort;
+					Debug.LogFormat( "Server listening port = {0}, client connection port = {1}", port.ServerListeningPort, port.ClientConnectionPort );
+					break;
+				}
+			}
+		}
+		networkManager.StartServer();
 	}
 
 	private void OnPlayerRemoved(string playfabId)
@@ -106,7 +127,7 @@ public class ServerStartUp : MonoBehaviour
 		Debug.Log("Server is shutting down");
 		foreach (var conn in UNetServer.Connections)
 		{
-			conn.Connection.Send(CustomGameServerMessageTypes.ShutdownMessage, new ShutdownMessage());
+			conn.Connection.Send(new ShutdownMessage());
 		}
 		StartCoroutine(ShutdownServer());
 	}
@@ -122,7 +143,7 @@ public class ServerStartUp : MonoBehaviour
 		Debug.LogFormat("Maintenance scheduled for: {0}", NextScheduledMaintenanceUtc.Value.ToLongDateString());
 		foreach (var conn in UNetServer.Connections)
 		{
-			conn.Connection.Send(CustomGameServerMessageTypes.ShutdownMessage, new MaintenanceMessage()
+			conn.Connection.Send(new MaintenanceMessage()
 			{
 				ScheduledMaintenanceUTC = (DateTime)NextScheduledMaintenanceUtc
 			});
